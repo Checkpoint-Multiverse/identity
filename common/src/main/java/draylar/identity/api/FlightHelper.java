@@ -5,6 +5,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 public class FlightHelper {
 
     public static void grantFlightTo(ServerPlayerEntity player) {
+        player.getAbilities().flying = true;
         player.getAbilities().allowFlying = true;
     }
 

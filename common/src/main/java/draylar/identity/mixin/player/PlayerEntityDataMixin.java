@@ -260,6 +260,7 @@ public abstract class PlayerEntityDataMixin extends LivingEntity implements Play
     public boolean updateIdentity(@Nullable LivingEntity identity) {
         PlayerEntity player = (PlayerEntity) (Object) this;
         EventResult result = IdentitySwapCallback.EVENT.invoker().swap((ServerPlayerEntity) player, identity);
+        boolean shouldFly = FlightHelper.hasFlight((ServerPlayerEntity) player) && player.getAbilities().flying;
         if(result.isFalse()) {
             return false;
         }
@@ -287,7 +288,7 @@ public abstract class PlayerEntityDataMixin extends LivingEntity implements Play
 
         // update flight properties on player depending on identity
         ServerPlayerEntity serverPlayerEntity = (ServerPlayerEntity) player;
-        if(Identity.hasFlyingPermissions((ServerPlayerEntity) player)) {
+        if (shouldFly) {
             FlightHelper.grantFlightTo(serverPlayerEntity);
             player.getAbilities().setFlySpeed(IdentityConfig.getInstance().flySpeed());
             player.sendAbilitiesUpdate();
