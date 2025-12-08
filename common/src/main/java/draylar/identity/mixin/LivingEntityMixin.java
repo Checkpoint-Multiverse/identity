@@ -9,7 +9,11 @@ import draylar.identity.mixin.accessor.LivingEntityAccessor;
 import draylar.identity.registry.IdentityEntityTags;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.entity.*;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityDimensions;
+import net.minecraft.entity.EntityPose;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
@@ -33,6 +37,8 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import virtuoel.pehkui.api.ScaleData;
+import virtuoel.pehkui.api.ScaleTypes;
 
 @Mixin(LivingEntity.class)
 public abstract class LivingEntityMixin extends Entity implements NearbySongAccessor {
@@ -176,22 +182,32 @@ public abstract class LivingEntityMixin extends Entity implements NearbySongAcce
 
     @Inject(at = @At("HEAD"), method = "getEyeHeight", cancellable = true)
     public void getEyeHeight(EntityPose pose, EntityDimensions dimensions, CallbackInfoReturnable<Float> cir) {
-        if((LivingEntity) (Object) this instanceof PlayerEntity player) {
+        if ((LivingEntity) (Object) this instanceof PlayerEntity player) {
 
             // this is cursed
             try {
                 LivingEntity identity = PlayerIdentity.getIdentity(player);
+                if (identity != null) {
+                    // Return the base eye height for the identity. Scaling is applied in getStandingEyeHeight.
+                    float base = ((LivingEntityAccessor) identity).callGetEyeHeight(pose, dimensions);
 
-                if(identity != null) {
-                    cir.setReturnValue(((LivingEntityAccessor) identity).callGetEyeHeight(pose, dimensions));
+                    if (Identity.PEHKUI_SCALES_CACHE.containsKey(player.getUuidAsString())) {
+                        ScaleData cacheScale = Identity.PEHKUI_SCALES_CACHE.get(player.getUuidAsString());
+                        if (cacheScale.getScaleType() == ScaleTypes.EYE_HEIGHT) {
+                            base = cacheScale.getScale();
+                        }
+                    }
+
+                    cir.setReturnValue(base);
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
     }
 
     @Inject(method = "hurtByWater", at = @At("HEAD"), cancellable = true)
     protected void identity_hurtByWater(CallbackInfoReturnable<Boolean> cir) {
-        if((LivingEntity) (Object) this instanceof PlayerEntity player) {
+        if ((LivingEntity) (Object) this instanceof PlayerEntity player) {
             LivingEntity entity = PlayerIdentity.getIdentity(player);
 
             if (entity != null) {
@@ -202,7 +218,7 @@ public abstract class LivingEntityMixin extends Entity implements NearbySongAcce
 
     @Inject(method = "canBreatheInWater", at = @At("HEAD"), cancellable = true)
     protected void identity_canBreatheInWater(CallbackInfoReturnable<Boolean> cir) {
-        if((LivingEntity) (Object) this instanceof PlayerEntity player) {
+        if ((LivingEntity) (Object) this instanceof PlayerEntity player) {
             LivingEntity entity = PlayerIdentity.getIdentity(player);
 
             if (entity != null) {
@@ -217,7 +233,7 @@ public abstract class LivingEntityMixin extends Entity implements NearbySongAcce
     @Environment(EnvType.CLIENT)
     @Inject(method = "setNearbySongPlaying", at = @At("RETURN"))
     protected void identity_setNearbySongPlaying(BlockPos songPosition, boolean playing, CallbackInfo ci) {
-        if((LivingEntity) (Object) this instanceof PlayerEntity player) {
+        if ((LivingEntity) (Object) this instanceof PlayerEntity player) {
             nearbySongPlaying = playing;
         }
     }
@@ -229,7 +245,7 @@ public abstract class LivingEntityMixin extends Entity implements NearbySongAcce
 
     @Inject(method = "isUndead", at = @At("HEAD"), cancellable = true)
     protected void identity_isUndead(CallbackInfoReturnable<Boolean> cir) {
-        if((LivingEntity) (Object) this instanceof PlayerEntity player) {
+        if ((LivingEntity) (Object) this instanceof PlayerEntity player) {
             LivingEntity identity = PlayerIdentity.getIdentity(player);
 
             if (identity != null) {
@@ -240,7 +256,7 @@ public abstract class LivingEntityMixin extends Entity implements NearbySongAcce
 
     @Inject(method = "canWalkOnFluid", at = @At("HEAD"), cancellable = true)
     protected void identity_canWalkOnFluid(FluidState state, CallbackInfoReturnable<Boolean> cir) {
-        if((LivingEntity) (Object) this instanceof PlayerEntity player) {
+        if ((LivingEntity) (Object) this instanceof PlayerEntity player) {
             LivingEntity identity = PlayerIdentity.getIdentity(player);
 
             if (identity != null && identity.getType().isIn(IdentityEntityTags.LAVA_WALKING) && state.isIn(FluidTags.LAVA)) {
@@ -255,7 +271,7 @@ public abstract class LivingEntityMixin extends Entity implements NearbySongAcce
             cancellable = true
     )
     protected void identity_allowSpiderClimbing(CallbackInfoReturnable<Boolean> cir) {
-        if((LivingEntity) (Object) this instanceof PlayerEntity player) {
+        if ((LivingEntity) (Object) this instanceof PlayerEntity player) {
             LivingEntity identity = PlayerIdentity.getIdentity(player);
 
             if (identity instanceof SpiderEntity) {

@@ -1,5 +1,6 @@
 package draylar.identity;
 
+import dev.architectury.event.EventFactory;
 import dev.architectury.event.events.common.PlayerEvent;
 import dev.architectury.networking.NetworkManager;
 import draylar.identity.ability.AbilityRegistry;
@@ -14,8 +15,10 @@ import draylar.identity.registry.IdentityCommands;
 import draylar.identity.registry.IdentityEntityTags;
 import draylar.identity.registry.IdentityEventHandlers;
 import io.netty.buffer.Unpooled;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.advancement.Advancement;
 import net.minecraft.advancement.AdvancementProgress;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.GuardianEntity;
@@ -26,12 +29,17 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import virtuoel.pehkui.api.ScaleData;
+import virtuoel.pehkui.api.ScaleEventCallback;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Identity {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(Identity.class);
+    public static final Map<String, ScaleData> PEHKUI_SCALES_CACHE = new HashMap<>();
 
     public void initialize() {
         IdentityEntityTags.init();
@@ -42,6 +50,23 @@ public class Identity {
         ServerNetworking.registerUseAbilityPacketHandler();
         registerJoinSyncPacket();
         IdentityTickHandlers.initialize();
+
+        if (FabricLoader.getInstance().isModLoaded("pehkui")) {
+            LOGGER.info("[Identity] Pehkui detected, enabling compatibility features.");
+            EventFactory.createEventResult(ScaleEventCallback.class).register(scaleData -> {
+                Entity entity = scaleData.getEntity();
+
+                if (entity == null) {
+                    return;
+                }
+
+                if (PEHKUI_SCALES_CACHE.containsKey(entity.getUuidAsString())) {
+                    PEHKUI_SCALES_CACHE.replace(entity.getUuidAsString(), scaleData);
+                } else {
+                    PEHKUI_SCALES_CACHE.put(entity.getUuidAsString(), scaleData);
+                }
+            });
+        }
     }
 
     public static void registerJoinSyncPacket() {
@@ -67,18 +92,18 @@ public class Identity {
     public static boolean hasFlyingPermissions(ServerPlayerEntity player) {
         LivingEntity identity = PlayerIdentity.getIdentity(player);
 
-        if(identity != null && IdentityConfig.getInstance().enableFlight() && identity.getType().isIn(IdentityEntityTags.FLYING)) {
+        if (identity != null && IdentityConfig.getInstance().enableFlight() && identity.getType().isIn(IdentityEntityTags.FLYING)) {
             List<String> requiredAdvancements = IdentityConfig.getInstance().advancementsRequiredForFlight();
 
             // requires at least 1 advancement, check if player has them
-            if(!requiredAdvancements.isEmpty()) {
+            if (!requiredAdvancements.isEmpty()) {
 
                 boolean hasPermission = true;
                 for (String requiredAdvancement : requiredAdvancements) {
                     Advancement advancement = player.server.getAdvancementLoader().get(new Identifier(requiredAdvancement));
                     AdvancementProgress progress = player.getAdvancementTracker().getProgress(advancement);
 
-                    if(!progress.isDone()) {
+                    if (!progress.isDone()) {
                         hasPermission = false;
                     }
                 }

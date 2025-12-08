@@ -1,5 +1,5 @@
 plugins {
-    id "com.github.johnrengelman.shadow" version "7.1.0"
+    id 'com.gradleup.shadow' version '9.2.2'
 }
 
 loom {
@@ -60,11 +60,7 @@ sourcesJar {
     from commonSources.archiveFile.map { zipTree(it) }
 }
 
-components.java {
-    withVariantsFromConfiguration(project.configurations.shadowRuntimeElements) {
-        skip()
-    }
-}
+// Note: Skipping shadowRuntimeElements variant filtering because the variant may not be present in the Java component
 
 publishing {
     publications {

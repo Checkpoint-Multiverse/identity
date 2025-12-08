@@ -1,5 +1,5 @@
 plugins {
-    id "com.github.johnrengelman.shadow" version "7.1.0"
+    id 'com.gradleup.shadow' version '9.2.2'
 }
 
 architectury {
@@ -19,7 +19,9 @@ repositories {
     maven {
         url "https://maven.draylar.dev/releases"
     }
-
+    maven {
+        url = "https://jitpack.io"
+    }
 }
 
 
@@ -35,6 +37,10 @@ dependencies {
     modImplementation include ("dev.draylar.omega-config:omega-config-base:1.4.0+1.20.1") {
         exclude group: "net.fabricmc.fabric-api"
     }
+
+    modApi("com.github.Virtuoel:Pehkui:${pehkui_version}", {
+        exclude group: "net.fabricmc.fabric-api"
+    })
 }
 
 processResources {
@@ -69,11 +75,7 @@ sourcesJar {
     from commonSources.archiveFile.map { zipTree(it) }
 }
 
-components.java {
-    withVariantsFromConfiguration(project.configurations.shadowRuntimeElements) {
-        skip()
-    }
-}
+// Note: Skipping shadowRuntimeElements variant filtering because the variant may not be present in the Java component
 
 publishing {
     publications {
